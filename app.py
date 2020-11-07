@@ -4,10 +4,12 @@ import firebase_admin
 from firebase_admin import credentials,firestore
 from geopy.geocoders import Nominatim
 
+from flask_cors import CORS,cross_origin
+
 geolocator = Nominatim(user_agent="Headout-App")
 import json
 app = Flask(__name__)
-
+CORS(app)
 cred = credentials.Certificate("serviceAccount.json")
 firebase_admin.initialize_app(cred)
 
@@ -16,7 +18,9 @@ product_ref = db.collection('products')
 
 @app.route('/')
 def index():
-    return "Hello World"
+    response =  jsonify("Hello World")
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 
 
 '''
@@ -37,6 +41,7 @@ def index():
 '''
 vendors = db.collection('vendors')
 @app.route('/signup',methods=['POST'])
+@cross_origin()
 def sign_up():
     data = request.json
     try:
@@ -45,7 +50,9 @@ def sign_up():
         data['vendorLatitude'] = location.latitude
         data['vendorLongitude'] = location.longitude
         vendors.document(str(vendorId)).set(data)
-        return jsonify({"success":True}), 200
+        response = jsonify({"success":True})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
     except Exception as e:
         return f"An Error Occured: {e}"
     
@@ -66,6 +73,7 @@ def sign_up():
 
 
 @app.route('/login',methods=['GET'])
+@cross_origin()
 def login():
     data = request.json
     try:
@@ -78,10 +86,13 @@ def login():
             actualPassword = vendor['vendorPassword']
             sentPassword = data['senderPassword']
             if actualPassword == sentPassword:
-                return {"success":True,"vendorId":vendor['vendorId'],"vendorEmail":vendor['vendorEmail']}, 200
+                response =  jsonify({"success":True,"vendorId":vendor['vendorId'],"vendorEmail":vendor['vendorEmail']})
+                response.headers.add("Access-Control-Allow-Origin", "*")
+                return response
             else:
-                return {"success":False, "details":"Invalid password"}, 200
-
+                response =  jsonify({"success":False, "details":"Invalid password"})
+                response.headers.add("Access-Control-Allow-Origin", "*")
+                return response
     except Exception as e:
         return f"An Error Occured: {e}"
 
@@ -122,6 +133,7 @@ def login():
 
 '''
 @app.route('/getAllOrders',methods=['GET'])
+@cross_origin()
 def getAllOrders():
     args = request.args
     orders = db.collection('orders')
@@ -129,7 +141,9 @@ def getAllOrders():
     try:
         vendorOrderCollection = orders.document(args['vendorId']).collection('orders')
         all_vendor_orders = [order.to_dict() for order in vendorOrderCollection.stream()]
-        return jsonify(all_vendor_orders),200
+        response = jsonify(all_vendor_orders)
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
     except Exception as e:
         return f"An Error Occured: {e}"
 
@@ -143,6 +157,7 @@ def getAllOrders():
 
 '''
 @app.route('/markProcessed',methods=['GET'])
+@cross_origin()
 def markProcessed():
     vendorId = request.args['vendorId']
     orderId = request.args['orderId']
@@ -151,7 +166,9 @@ def markProcessed():
     try:
         allOrders = orders.document(vendorId).collection('orders')
         allOrders.document(orderId).update({"orderProcessed":True})
-        return {"success":True}, 200
+        response = jsonify({"success":True})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
     except Exception as e:
         return f"An Error Occured: {e}"
 
@@ -169,6 +186,7 @@ def markProcessed():
         }
 '''
 @app.route('/specificOrder')
+@cross_origin()
 def specificOrder():
     vendorId = request.args['vendorId']
     orderId = request.args['orderId']
@@ -177,11 +195,13 @@ def specificOrder():
     try:
         allOrders = orders.document(vendorId).collection('orders')
         order = allOrders.document(orderId).get().to_dict()
-        return jsonify(order), 200
+        response = jsonify(order)
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
     except Exception as e:
         return f"An Error Occured: {e}"
 
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,port=8080)
