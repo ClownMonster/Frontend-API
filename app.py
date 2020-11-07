@@ -44,17 +44,21 @@ vendors = db.collection('vendors')
 @cross_origin()
 def sign_up():
     data = request.json
+    print(data)
+    print("ji")
     try:
+        print("hello")
         vendorId = int(data['vendorId'])
+        print(vendorId)
         location = geolocator.geocode(data['vendorAddress'])
+        print(location)
         data['vendorLatitude'] = location.latitude
         data['vendorLongitude'] = location.longitude
         vendors.document(str(vendorId)).set(data)
         response = jsonify({"success":True})
-        response.headers.add("Access-Control-Allow-Origin", "*")
         return response
     except Exception as e:
-        return f"An Error Occured: {e}"
+        return f"An Error Occured: {e}",404
     
 '''
 
@@ -72,26 +76,24 @@ def sign_up():
 '''
 
 
-@app.route('/login',methods=['GET'])
+@app.route('/login',methods=['GET','POST'])
 @cross_origin()
 def login():
     data = request.json
     try:
-        vendorId = int(data['vendorId'])
+        vendorId = int(data['vendor_id'])
         vendor = vendors.document(str(vendorId)).get().to_dict()
         print(vendor)
         if vendor == None:
             return {"success":False,"details":"Vendor does not exist"}, 404
         else:
             actualPassword = vendor['vendorPassword']
-            sentPassword = data['senderPassword']
+            sentPassword = data['password']
             if actualPassword == sentPassword:
-                response =  jsonify({"success":True,"vendorId":vendor['vendorId'],"vendorEmail":vendor['vendorEmail']})
-                response.headers.add("Access-Control-Allow-Origin", "*")
+                response =  jsonify({"success":True,"vendorId":vendor['vendorId'],"vendorEmail":vendor['vendorEmail'],"vendorName":vendor['vendorName']})
                 return response
             else:
                 response =  jsonify({"success":False, "details":"Invalid password"})
-                response.headers.add("Access-Control-Allow-Origin", "*")
                 return response
     except Exception as e:
         return f"An Error Occured: {e}"
@@ -142,7 +144,6 @@ def getAllOrders():
         vendorOrderCollection = orders.document(args['vendorId']).collection('orders')
         all_vendor_orders = [order.to_dict() for order in vendorOrderCollection.stream()]
         response = jsonify(all_vendor_orders)
-        response.headers.add("Access-Control-Allow-Origin", "*")
         return response
     except Exception as e:
         return f"An Error Occured: {e}"
@@ -167,7 +168,6 @@ def markProcessed():
         allOrders = orders.document(vendorId).collection('orders')
         allOrders.document(orderId).update({"orderProcessed":True})
         response = jsonify({"success":True})
-        response.headers.add("Access-Control-Allow-Origin", "*")
         return response
     except Exception as e:
         return f"An Error Occured: {e}"
@@ -196,7 +196,6 @@ def specificOrder():
         allOrders = orders.document(vendorId).collection('orders')
         order = allOrders.document(orderId).get().to_dict()
         response = jsonify(order)
-        response.headers.add("Access-Control-Allow-Origin", "*")
         return response
     except Exception as e:
         return f"An Error Occured: {e}"
